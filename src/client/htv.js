@@ -1,4 +1,4 @@
-const COMMANDS = new Set(['MODE', 'HEIGHT', 'VDO', 'TITLE'])
+const COMMANDS = new Set(['MODE', 'HEIGHT', 'VDO', 'TITLE', 'ROOM'])
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js'
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
@@ -8,6 +8,7 @@ export const parseText = text => {
     mode: 'swarm',
     height: 620,
     vdo: '',
+    room: '',
     title: 'Hitchhiker.tv Live Surface'
   }
 
@@ -22,6 +23,7 @@ export const parseText = text => {
     if (key === 'MODE') out.mode = ['swarm', 'shatter', 'portal', 'nova'].includes(value.toLowerCase()) ? value.toLowerCase() : out.mode
     if (key === 'HEIGHT') out.height = clamp(parseInt(value, 10) || out.height, 360, 1400)
     if (key === 'VDO') out.vdo = value
+    if (key === 'ROOM') out.room = value.replace(/[^A-Za-z0-9_]/g, '_')
     if (key === 'TITLE') out.title = value || out.title
   }
 
@@ -45,6 +47,11 @@ const html = spec => `
         </select>
       </div>
       <div class="htv-controls">
+        <button type="button" data-action="join" class="htv-join">Join Room</button>
+        <button type="button" data-action="watch">Watch Room</button>
+        <span class="htv-room" title="VDO.Ninja room name"></span>
+      </div>
+      <div class="htv-controls">
         <input type="url" data-action="vdo-url" placeholder="https://vdo.ninja/?view=STREAM_ID&cleanoutput" value="${escapeAttr(spec.vdo)}">
         <button type="button" data-action="load-vdo">Load VDO</button>
         <button type="button" data-action="hide-vdo">Hide</button>
@@ -66,6 +73,9 @@ const css = `
   .htv-status{margin-top:8px;padding:7px 9px;border:1px solid rgba(255,255,255,.14);border-radius:7px;background:rgba(0,0,0,.22);color:#b9c0b6;font-size:12px;line-height:1.35}.htv-status strong{color:#87ffd8}
   .htv-vdo{position:absolute;z-index:4;right:18px;bottom:18px;width:min(42%,360px);aspect-ratio:16/9;border:1px solid rgba(135,255,216,.42);border-radius:8px;overflow:hidden;background:#07090b;box-shadow:0 16px 58px rgba(0,0,0,.45),0 0 36px rgba(135,255,216,.14);transform:perspective(800px) rotateY(-14deg) rotateX(5deg);opacity:0;pointer-events:none;transition:opacity .18s ease}
   .htv-vdo.is-visible{opacity:.9;pointer-events:auto}.htv-vdo iframe{width:100%;height:100%;border:0;background:#000}.htv-video,.htv-synthetic{position:absolute;left:-9999px;top:-9999px;width:2px;height:2px;opacity:0}
+  .htv-vdo.is-joined{left:5%;right:5%;top:9%;bottom:7%;width:auto;aspect-ratio:auto;transform:none;opacity:1;border-color:rgba(255,207,115,.55)}
+  .htv-join{background:rgba(135,255,216,.16)!important;border-color:rgba(135,255,216,.5)!important}
+  .htv-room{align-self:center;padding:0 8px;color:#87ffd8;font-size:11px;font-family:ui-monospace,monospace}
 `
 
 const escapeHTML = value => String(value || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
@@ -88,7 +98,7 @@ export const emit = (div, item) => {
 export const bind = (div, item) => {
   const root = div.find('.htv-shell')[0]
   if (!root) return
-  initSurface(root, parseText(item.text))
+  initSurface(root, parseText(item.text), item)
   div.on('dblclick', event => {
     if (event.target.closest('button,input,select,iframe')) return
     if (window.wiki?.textEditor) window.wiki.textEditor(div, item)
@@ -132,7 +142,7 @@ const cameraDiagnostics = () => {
   return `origin=${location.origin}; secure=${String(isSecureContext)}; framed=${String(isFramed())}; policy.camera=${policyAllows}`
 }
 
-const initSurface = async (root, spec) => {
+const initSurface = async (root, spec, item) => {
   const stage = root.querySelector('.htv-stage')
   const video = root.querySelector('.htv-video')
   const synthetic = root.querySelector('.htv-synthetic')
@@ -251,25 +261,43 @@ const initSurface = async (root, spec) => {
     if (announce) setStatus(root, 'Synthetic feed active.')
   }
 
-  function loadVdo() {
-    const url = (vdoInput.value || '').trim()
-    if (!url) {
-      setStatus(root, 'Paste a VDO.Ninja view URL before loading.', 'VDO needs a URL.')
-      return
-    }
+  const room = spec.room || `htv_${String(item?.id || 'lobby').replace(/[^A-Za-z0-9_]/g, '').slice(0, 12)}`
+  root.querySelector('.htv-room').textContent = room
+
+  function showVdo(url, joined) {
     vdoSurface.textContent = ''
     const iframe = document.createElement('iframe')
     iframe.allow = 'camera; microphone; autoplay; fullscreen; display-capture'
     iframe.src = url
     vdoSurface.appendChild(iframe)
     vdoSurface.classList.add('is-visible')
+    vdoSurface.classList.toggle('is-joined', !!joined)
+  }
+
+  function loadVdo() {
+    const url = (vdoInput.value || '').trim()
+    if (!url) {
+      setStatus(root, 'Paste a VDO.Ninja view URL before loading.', 'VDO needs a URL.')
+      return
+    }
+    showVdo(url, false)
     setStatus(root, 'VDO.Ninja is loaded as a live browser surface.', 'VDO surface active.')
   }
 
+  function joinRoom() {
+    showVdo(`https://vdo.ninja/?room=${room}`, true)
+    setStatus(root, `Allow camera and microphone, then join. Everyone on this page shares room ${room}. No app or account needed.`, 'Joining the room.')
+  }
+
+  function watchRoom() {
+    showVdo(`https://vdo.ninja/?scene&room=${room}&cleanoutput`, false)
+    setStatus(root, `Watching room ${room} as a live surface.`, 'Room surface active.')
+  }
+
   function hideVdo() {
-    vdoSurface.classList.remove('is-visible')
+    vdoSurface.classList.remove('is-visible', 'is-joined')
     vdoSurface.textContent = ''
-    setStatus(root, 'VDO surface hidden. Texture source is unchanged.')
+    setStatus(root, 'VDO surface hidden and room left. Texture source is unchanged.')
   }
 
   root.addEventListener('pointermove', event => {
@@ -295,6 +323,8 @@ const initSurface = async (root, spec) => {
   })
   root.querySelector('[data-action="synthetic"]').addEventListener('click', () => useSynthetic())
   root.querySelector('[data-action="camera"]').addEventListener('click', useCamera)
+  root.querySelector('[data-action="join"]').addEventListener('click', joinRoom)
+  root.querySelector('[data-action="watch"]').addEventListener('click', watchRoom)
   root.querySelector('[data-action="load-vdo"]').addEventListener('click', loadVdo)
   root.querySelector('[data-action="hide-vdo"]').addEventListener('click', hideVdo)
   modeSelect.addEventListener('change', () => { state.mode = modeSelect.value })
