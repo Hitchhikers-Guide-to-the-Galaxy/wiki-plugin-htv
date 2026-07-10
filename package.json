@@ -1,0 +1,30 @@
+{
+  "name": "wiki-plugin-htv",
+  "version": "0.1.0",
+  "description": "Federated Wiki plugin for Hitchhiker.tv live media surfaces and wiki-controlled broadcast experiments.",
+  "type": "module",
+  "main": "client/htv.js",
+  "files": [
+    "client",
+    "pages",
+    "factory.json"
+  ],
+  "scripts": {
+    "build": "node scripts/build.js",
+    "about": "wiki -p 3010 -d . --security_legacy",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  },
+  "author": "David Bovill",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hitchhikers-Guide-to-the-Galaxy/wiki-plugin-htv.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Hitchhikers-Guide-to-the-Galaxy/wiki-plugin-htv/issues"
+  },
+  "homepage": "https://github.com/Hitchhikers-Guide-to-the-Galaxy/wiki-plugin-htv#readme"
+}
