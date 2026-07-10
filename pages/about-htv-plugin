@@ -14,7 +14,7 @@
     {
       "type": "markdown",
       "id": "163563e5996781b4",
-      "text": "## Item Text\n\nCommands follow the Federated Wiki DSL convention: uppercase first word for commands, optional colon accepted.\n\n- `TITLE` sets the panel title.\n- `MODE` chooses `SWARM`, `SHATTER`, or `PORTAL`.\n- `HEIGHT` sets the item height in pixels.\n- `VDO` provides an optional VDO.Ninja view URL."
+      "text": "## Item Text\n\nCommands follow the Federated Wiki DSL convention: uppercase first word for commands, optional colon accepted.\n\n- `TITLE` sets the panel title.\n- `MODE` chooses `SWARM`, `SHATTER`, `PORTAL`, or `NOVA`.\n- `HEIGHT` sets the item height in pixels.\n- `VDO` provides an optional VDO.Ninja view URL.\n\n`NOVA` blasts the tiles apart in periodic explosions. Clicking any surface spins it through the depth plane, with a ripple spreading from the click point, before it eases back into place."
     },
     {
       "type": "markdown",
@@ -41,7 +41,7 @@
           {
             "type": "markdown",
             "id": "163563e5996781b4",
-            "text": "## Item Text\n\nCommands follow the Federated Wiki DSL convention: uppercase first word for commands, optional colon accepted.\n\n- `TITLE` sets the panel title.\n- `MODE` chooses `SWARM`, `SHATTER`, or `PORTAL`.\n- `HEIGHT` sets the item height in pixels.\n- `VDO` provides an optional VDO.Ninja view URL."
+            "text": "## Item Text\n\nCommands follow the Federated Wiki DSL convention: uppercase first word for commands, optional colon accepted.\n\n- `TITLE` sets the panel title.\n- `MODE` chooses `SWARM`, `SHATTER`, `PORTAL`, or `NOVA`.\n- `HEIGHT` sets the item height in pixels.\n- `VDO` provides an optional VDO.Ninja view URL.\n\n`NOVA` blasts the tiles apart in periodic explosions. Clicking any surface spins it through the depth plane, with a ripple spreading from the click point, before it eases back into place."
           },
           {
             "type": "markdown",

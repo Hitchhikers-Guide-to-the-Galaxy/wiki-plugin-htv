@@ -19,7 +19,7 @@ export const parseText = text => {
     const value = rest.join(' ').trim()
     if (!COMMANDS.has(key)) continue
 
-    if (key === 'MODE') out.mode = ['swarm', 'shatter', 'portal'].includes(value.toLowerCase()) ? value.toLowerCase() : out.mode
+    if (key === 'MODE') out.mode = ['swarm', 'shatter', 'portal', 'nova'].includes(value.toLowerCase()) ? value.toLowerCase() : out.mode
     if (key === 'HEIGHT') out.height = clamp(parseInt(value, 10) || out.height, 360, 1400)
     if (key === 'VDO') out.vdo = value
     if (key === 'TITLE') out.title = value || out.title
@@ -33,7 +33,7 @@ const html = spec => `
     <div class="htv-stage"></div>
     <div class="htv-panel">
       <h3>${escapeHTML(spec.title)}</h3>
-      <p>A live media surface rendered directly by the wiki plugin, avoiding the frame plugin sandbox.</p>
+      <p>A live media surface rendered directly by the wiki plugin, avoiding the frame plugin sandbox. Click the surface to spin it through the depth plane.</p>
       <div class="htv-controls">
         <button type="button" data-action="synthetic">Synthetic</button>
         <button type="button" data-action="camera">Use Camera</button>
@@ -41,6 +41,7 @@ const html = spec => `
           <option value="swarm"${spec.mode === 'swarm' ? ' selected' : ''}>Swarm</option>
           <option value="shatter"${spec.mode === 'shatter' ? ' selected' : ''}>Shatter</option>
           <option value="portal"${spec.mode === 'portal' ? ' selected' : ''}>Portal</option>
+          <option value="nova"${spec.mode === 'nova' ? ' selected' : ''}>Nova</option>
         </select>
       </div>
       <div class="htv-controls">
@@ -139,7 +140,7 @@ const initSurface = async (root, spec) => {
   const vdoSurface = root.querySelector('.htv-vdo')
   const modeSelect = root.querySelector('[data-action="mode"]')
   const vdoInput = root.querySelector('[data-action="vdo-url"]')
-  const state = { mode: spec.mode, pointerX: 0, pointerY: 0, startedAt: performance.now(), disposed: false }
+  const state = { mode: spec.mode, pointerX: 0, pointerY: 0, startedAt: performance.now(), disposed: false, spinStart: null }
 
   let three
   try {
@@ -276,6 +277,22 @@ const initSurface = async (root, spec) => {
     state.pointerX = (event.clientX - rect.left) / rect.width * 2 - 1
     state.pointerY = -((event.clientY - rect.top) / rect.height * 2 - 1)
   })
+  stage.addEventListener('click', event => {
+    const rect = root.getBoundingClientRect()
+    const ndc = new three.Vector2(
+      (event.clientX - rect.left) / rect.width * 2 - 1,
+      -(((event.clientY - rect.top) / rect.height) * 2 - 1)
+    )
+    const probe = new three.Vector3(ndc.x, ndc.y, 0.5).unproject(camera)
+    const dir = probe.sub(camera.position).normalize()
+    const hit = camera.position.clone().add(dir.multiplyScalar(-camera.position.z / dir.z))
+    group.worldToLocal(hit)
+    const seconds = (performance.now() - state.startedAt) / 1000
+    const uniforms = group.userData.uniforms
+    uniforms.uClick.value.set(hit.x, hit.y)
+    uniforms.uClickTime.value = seconds
+    state.spinStart = seconds
+  })
   root.querySelector('[data-action="synthetic"]').addEventListener('click', () => useSynthetic())
   root.querySelector('[data-action="camera"]').addEventListener('click', useCamera)
   root.querySelector('[data-action="load-vdo"]').addEventListener('click', loadVdo)
@@ -296,25 +313,44 @@ const buildTiles = (three, group, texture, state) => {
     uTexture: { value: texture },
     uTime: { value: 0 },
     uPointer: { value: new three.Vector2() },
-    uMode: { value: 0 }
+    uMode: { value: 0 },
+    uClick: { value: new three.Vector2(999, 999) },
+    uClickTime: { value: -999 }
   }
   const material = new three.ShaderMaterial({
     uniforms,
     transparent: true,
     side: three.DoubleSide,
     vertexShader: `
-      uniform float uTime; uniform vec2 uPointer; uniform float uMode;
-      attribute vec2 tileUvMin; attribute vec2 tileUvMax; attribute float tileIndex; attribute float tileSeed;
+      uniform float uTime; uniform vec2 uPointer; uniform float uMode; uniform vec2 uClick; uniform float uClickTime;
+      attribute vec2 tileUvMin; attribute vec2 tileUvMax; attribute float tileIndex; attribute float tileSeed; attribute vec2 tileCenter;
       varying vec2 vUv; varying float vGlow;
       mat2 rot(float a){float s=sin(a);float c=cos(a);return mat2(c,-s,s,c);}
       void main(){
         vUv=mix(tileUvMin,tileUvMax,uv); vec3 p=position;
         float wave=sin(uTime*1.7+tileSeed*6.283); float pulse=sin(uTime*.7+tileIndex*.037);
         float pointerFalloff=1.0-clamp(length(position.xy*.08-uPointer)*1.6,0.0,1.0);
+        float boom=0.0;
         if(uMode<.5){p.z+=wave*.85+pointerFalloff*2.8; p.xy+=normalize(vec2(position.x+.01,position.y+.01))*pulse*.08;}
         else if(uMode<1.5){p.xy=rot(wave*.18+pointerFalloff*.35)*p.xy; p.z+=abs(wave)*2.6+pointerFalloff*5.0;}
-        else{float r=length(position.xy); p.z+=sin(r*1.8-uTime*2.4)*1.4; p.xy*=1.0+.07*sin(uTime+r*3.0); p.z+=pointerFalloff*3.6;}
-        vGlow=pointerFalloff+.35*abs(wave); gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);
+        else if(uMode<2.5){float r=length(position.xy); p.z+=sin(r*1.8-uTime*2.4)*1.4; p.xy*=1.0+.07*sin(uTime+r*3.0); p.z+=pointerFalloff*3.6;}
+        else{
+          float cyc=fract(uTime*.16);
+          boom=smoothstep(.02,.14,cyc)*(1.0-smoothstep(.5,.92,cyc));
+          vec3 dir=normalize(vec3(tileCenter+vec2(.001),.35+1.3*fract(tileSeed*7.31)));
+          p.xy=rot(boom*(tileSeed-.5)*12.566)*p.xy;
+          p+=dir*boom*(1.5+8.5*fract(tileSeed*3.17));
+          p.z+=pointerFalloff*3.0;
+        }
+        float age=uTime-uClickTime;
+        if(age>0.0&&age<2.2){
+          float cd=length(tileCenter-uClick);
+          float att=exp(-cd*.35)*(1.0-age/2.2);
+          float ring=sin(cd*2.6-age*9.0);
+          p.z+=ring*att*3.2;
+          vGlow=att*max(ring,0.0);
+        } else { vGlow=0.0; }
+        vGlow+=pointerFalloff+.35*abs(wave)+boom*1.4; gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);
       }`,
     fragmentShader: `
       uniform sampler2D uTexture; uniform float uTime; varying vec2 vUv; varying float vGlow;
@@ -334,14 +370,17 @@ const buildTiles = (three, group, texture, state) => {
       const geo = new three.PlaneGeometry(planeW * 0.94, planeH * 0.94, 1, 1)
       const uvMin = [x / cols, 1 - (y + 1) / rows]
       const uvMax = [(x + 1) / cols, 1 - y / rows]
+      const centerX = (x - cols / 2 + 0.5) * planeW
+      const centerY = (rows / 2 - y - 0.5) * planeH
       const count = geo.attributes.position.count
       geo.setAttribute('tileUvMin', new three.BufferAttribute(new Float32Array(count * 2).fill(0).map((_, i) => uvMin[i % 2]), 2))
       geo.setAttribute('tileUvMax', new three.BufferAttribute(new Float32Array(count * 2).fill(0).map((_, i) => uvMax[i % 2]), 2))
       geo.setAttribute('tileIndex', new three.BufferAttribute(new Float32Array(count).fill(y * cols + x), 1))
       geo.setAttribute('tileSeed', new three.BufferAttribute(new Float32Array(count).fill(Math.random()), 1))
+      geo.setAttribute('tileCenter', new three.BufferAttribute(new Float32Array(count * 2).fill(0).map((_, i) => (i % 2 === 0 ? centerX : centerY)), 2))
       const mesh = new three.Mesh(geo, material)
-      mesh.position.x = (x - cols / 2 + 0.5) * planeW
-      mesh.position.y = (rows / 2 - y - 0.5) * planeH
+      mesh.position.x = centerX
+      mesh.position.y = centerY
       group.add(mesh)
     }
   }
@@ -351,10 +390,22 @@ const updateTiles = (group, seconds, state) => {
   const uniforms = group.userData.uniforms
   uniforms.uTime.value = seconds
   uniforms.uPointer.value.set(state.pointerX, state.pointerY)
-  uniforms.uMode.value = state.mode === 'swarm' ? 0 : state.mode === 'shatter' ? 1 : 2
-  group.rotation.y = Math.sin(seconds * 0.22) * 0.16 + state.pointerX * 0.12
+  uniforms.uMode.value = state.mode === 'swarm' ? 0 : state.mode === 'shatter' ? 1 : state.mode === 'portal' ? 2 : 3
+  let spin = 0
+  let dive = 0
+  if (state.spinStart != null) {
+    const phase = (seconds - state.spinStart) / 1.8
+    if (phase >= 1) {
+      state.spinStart = null
+    } else if (phase > 0) {
+      const ease = phase < 0.5 ? 4 * phase * phase * phase : 1 - Math.pow(-2 * phase + 2, 3) / 2
+      spin = ease * Math.PI * 2
+      dive = Math.sin(phase * Math.PI)
+    }
+  }
+  group.rotation.y = Math.sin(seconds * 0.22) * 0.16 + state.pointerX * 0.12 + spin
   group.rotation.x = -0.06 + state.pointerY * 0.08
-  group.position.z = Math.sin(seconds * 0.4) * 0.32
+  group.position.z = Math.sin(seconds * 0.4) * 0.32 - dive * 5.2
 }
 
 if (typeof window !== 'undefined') {

@@ -14,3 +14,8 @@ test('accepts optional colon form', () => {
   assert.equal(parsed.mode, 'portal')
   assert.equal(parsed.height, 500)
 })
+
+test('parses the nova mode and rejects unknown modes', () => {
+  assert.equal(parseText('MODE NOVA').mode, 'nova')
+  assert.equal(parseText('MODE DISCO').mode, 'swarm')
+})
