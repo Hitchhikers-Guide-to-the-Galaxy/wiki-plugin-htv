@@ -1,4 +1,4 @@
-const COMMANDS = new Set(['MODE', 'HEIGHT', 'VDO', 'TITLE', 'ROOM'])
+const COMMANDS = new Set(['MODE', 'HEIGHT', 'VDO', 'TITLE', 'ROOM', 'UI', 'STREAM'])
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js'
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
@@ -9,6 +9,8 @@ export const parseText = text => {
     height: 620,
     vdo: '',
     room: '',
+    ui: 'studio',
+    stream: '',
     title: 'Hitchhiker.tv Live Surface'
   }
 
@@ -24,17 +26,30 @@ export const parseText = text => {
     if (key === 'HEIGHT') out.height = clamp(parseInt(value, 10) || out.height, 360, 1400)
     if (key === 'VDO') out.vdo = value
     if (key === 'ROOM') out.room = value.replace(/[^A-Za-z0-9_]/g, '_')
+    if (key === 'UI') out.ui = ['join', 'watch', 'studio'].includes(value.toLowerCase()) ? value.toLowerCase() : out.ui
+    if (key === 'STREAM') out.stream = value
     if (key === 'TITLE') out.title = value || out.title
   }
 
   return out
 }
 
-const html = spec => `
-  <div class="htv-shell" style="height:${spec.height}px">
-    <div class="htv-stage"></div>
-    <div class="htv-panel">
-      <h3>${escapeHTML(spec.title)}</h3>
+const controlsFor = spec => {
+  if (spec.ui === 'join')
+    return `
+      <div class="htv-controls">
+        <button type="button" data-action="join" class="htv-join htv-big">Join Room</button>
+        <button type="button" data-action="fullscreen" title="Fullscreen">⛶</button>
+      </div>
+      <div class="htv-controls"><span class="htv-room" title="VDO.Ninja room name"></span></div>`
+  if (spec.ui === 'watch')
+    return `
+      <div class="htv-controls">
+        <button type="button" data-action="watch" class="htv-join htv-big">Watch</button>
+        <button type="button" data-action="fullscreen" title="Fullscreen">⛶</button>
+      </div>
+      <div class="htv-controls"><span class="htv-room" title="VDO.Ninja room name"></span></div>`
+  return `
       <p>A live media surface rendered directly by the wiki plugin, avoiding the frame plugin sandbox. Click the surface to spin it through the depth plane.</p>
       <div class="htv-controls">
         <button type="button" data-action="synthetic">Synthetic</button>
@@ -45,6 +60,7 @@ const html = spec => `
           <option value="portal"${spec.mode === 'portal' ? ' selected' : ''}>Portal</option>
           <option value="nova"${spec.mode === 'nova' ? ' selected' : ''}>Nova</option>
         </select>
+        <button type="button" data-action="fullscreen" title="Fullscreen">⛶</button>
       </div>
       <div class="htv-controls">
         <button type="button" data-action="join" class="htv-join">Join Room</button>
@@ -55,7 +71,15 @@ const html = spec => `
         <input type="url" data-action="vdo-url" placeholder="https://vdo.ninja/?view=STREAM_ID&cleanoutput" value="${escapeAttr(spec.vdo)}">
         <button type="button" data-action="load-vdo">Load VDO</button>
         <button type="button" data-action="hide-vdo">Hide</button>
-      </div>
+      </div>`
+}
+
+const html = spec => `
+  <div class="htv-shell" style="height:${spec.height}px">
+    <div class="htv-stage"></div>
+    <div class="htv-panel">
+      <h3>${escapeHTML(spec.title)}</h3>
+      ${controlsFor(spec)}
       <div class="htv-status" role="status">Synthetic feed active.</div>
     </div>
     <div class="htv-vdo" aria-label="VDO.Ninja live surface"></div>
@@ -77,7 +101,10 @@ const css = `
   .htv-shell.is-joined .htv-panel{opacity:0;pointer-events:none}
   .htv-leave{position:absolute;top:10px;right:10px;z-index:2;min-height:31px;padding:0 12px;border:1px solid rgba(255,207,115,.6);border-radius:7px;background:rgba(9,12,16,.85);color:#ffcf73;font:inherit;font-size:12px;cursor:pointer}
   .htv-join{background:rgba(135,255,216,.16)!important;border-color:rgba(135,255,216,.5)!important}
+  .htv-big{flex:1 1 auto;min-height:44px!important;font-size:15px!important;font-weight:600}
   .htv-room{align-self:center;padding:0 8px;color:#87ffd8;font-size:11px;font-family:ui-monospace,monospace}
+  .htv-shell:fullscreen{height:100vh!important;border-radius:0}
+  .htv-vdo video{width:100%;height:100%;object-fit:contain;background:#000}
 `
 
 const escapeHTML = value => String(value || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
@@ -177,7 +204,7 @@ const initSurface = async (root, spec, item) => {
 
   buildTiles(three, group, texture, state)
   useSynthetic()
-  if (spec.vdo) loadVdo()
+  if (spec.vdo) showVdo(spec.vdo, false)
 
   const resize = () => {
     const rect = root.getBoundingClientRect()
@@ -264,32 +291,73 @@ const initSurface = async (root, spec, item) => {
   }
 
   const room = spec.room || `htv_${String(item?.id || 'lobby').replace(/[^A-Za-z0-9_]/g, '').slice(0, 12)}`
-  root.querySelector('.htv-room').textContent = room
-  const watchUrl = `https://vdo.ninja/?scene&room=${room}&cleanoutput`
-  if (!vdoInput.value) vdoInput.value = watchUrl
+  const roomLabel = root.querySelector('.htv-room')
+  if (roomLabel) roomLabel.textContent = room
+  if (vdoInput && !vdoInput.value) vdoInput.value = `https://vdo.ninja/?room=${room}`
 
-  function showVdo(url, joined) {
+  function showSurface(element, expand, exitLabel) {
     vdoSurface.textContent = ''
+    vdoSurface.appendChild(element)
+    if (expand) {
+      const exit = document.createElement('button')
+      exit.type = 'button'
+      exit.className = 'htv-leave'
+      exit.textContent = exitLabel
+      exit.addEventListener('click', hideVdo)
+      vdoSurface.appendChild(exit)
+    }
+    vdoSurface.classList.add('is-visible')
+    vdoSurface.classList.toggle('is-joined', !!expand)
+    root.classList.toggle('is-joined', !!expand)
+  }
+
+  function vdoIframe(url) {
     const iframe = document.createElement('iframe')
     iframe.allow = 'camera; microphone; autoplay; fullscreen; display-capture'
     iframe.src = url
-    vdoSurface.appendChild(iframe)
-    if (joined) {
-      const leave = document.createElement('button')
-      leave.type = 'button'
-      leave.className = 'htv-leave'
-      leave.textContent = 'Leave Room'
-      leave.addEventListener('click', hideVdo)
-      vdoSurface.appendChild(leave)
+    return iframe
+  }
+
+  function showVdo(url, expand, exitLabel = 'Leave Room') {
+    showSurface(vdoIframe(url), expand, exitLabel)
+    if (vdoInput) vdoInput.value = url
+  }
+
+  async function streamElement(url) {
+    const yt = url.match(/(?:youtube(?:-nocookie)?\.com\/(?:watch\?.*v=|live\/|embed\/)|youtu\.be\/)([\w-]{6,})/)
+    if (yt) return vdoIframe(`https://www.youtube-nocookie.com/embed/${yt[1]}?autoplay=1`)
+    const tw = url.match(/twitch\.tv\/([\w]+)/)
+    if (tw) return vdoIframe(`https://player.twitch.tv/?channel=${tw[1]}&parent=${location.hostname}&autoplay=true`)
+    if (/\.m3u8(\?|$)/.test(url)) {
+      const media = document.createElement('video')
+      media.autoplay = true
+      media.playsInline = true
+      media.controls = true
+      media.muted = true
+      if (!window.Hls) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+          script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js'
+          script.onload = resolve
+          script.onerror = reject
+          document.head.appendChild(script)
+        }).catch(() => {})
+      }
+      if (window.Hls?.isSupported()) {
+        const hls = new window.Hls()
+        hls.loadSource(url)
+        hls.attachMedia(media)
+      } else {
+        media.src = url
+      }
+      media.play().catch(() => {})
+      return media
     }
-    vdoSurface.classList.add('is-visible')
-    vdoSurface.classList.toggle('is-joined', !!joined)
-    root.classList.toggle('is-joined', !!joined)
-    vdoInput.value = url
+    return vdoIframe(url)
   }
 
   function loadVdo() {
-    const url = (vdoInput.value || '').trim()
+    const url = (vdoInput?.value || '').trim()
     if (!url) {
       setStatus(root, 'Paste a VDO.Ninja view URL before loading.', 'VDO needs a URL.')
       return
@@ -303,16 +371,33 @@ const initSurface = async (root, spec, item) => {
     setStatus(root, `Allow camera and microphone, then join. Everyone on this page shares room ${room}. No app or account needed.`, 'Joining the room.')
   }
 
-  function watchRoom() {
-    showVdo(watchUrl, false)
-    setStatus(root, `Watching room ${room} as a live surface.`, 'Room surface active.')
+  async function watchRoom() {
+    if (spec.stream) {
+      try {
+        showSurface(await streamElement(spec.stream), true, 'Stop Watching')
+        setStatus(root, 'Playing the broadcast stream.', 'Broadcast active.')
+      } catch (error) {
+        setStatus(root, `Could not load the stream: ${error.message || error}`, 'Stream failed.')
+      }
+      return
+    }
+    showVdo(`https://vdo.ninja/?room=${room}&videodevice=0&audiodevice=0`, true, 'Stop Watching')
+    setStatus(root, `Watching joins room ${room} as a visible, silent guest — everyone can see who is watching.`, 'Watching the room.')
+  }
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    } else {
+      root.requestFullscreen().catch(error => setStatus(root, `Fullscreen unavailable: ${error.message}`, 'No fullscreen.'))
+    }
   }
 
   function hideVdo() {
     vdoSurface.classList.remove('is-visible', 'is-joined')
     root.classList.remove('is-joined')
     vdoSurface.textContent = ''
-    setStatus(root, 'VDO surface hidden and room left. Texture source is unchanged.')
+    setStatus(root, 'Surface hidden and room left. Texture source is unchanged.')
   }
 
   root.addEventListener('pointermove', event => {
@@ -336,16 +421,28 @@ const initSurface = async (root, spec, item) => {
     uniforms.uClickTime.value = seconds
     state.spinStart = seconds
   })
-  root.querySelector('[data-action="synthetic"]').addEventListener('click', () => useSynthetic())
-  root.querySelector('[data-action="camera"]').addEventListener('click', useCamera)
-  root.querySelector('[data-action="join"]').addEventListener('click', joinRoom)
-  root.querySelector('[data-action="watch"]').addEventListener('click', watchRoom)
-  root.querySelector('[data-action="load-vdo"]').addEventListener('click', loadVdo)
-  root.querySelector('[data-action="hide-vdo"]').addEventListener('click', hideVdo)
-  modeSelect.addEventListener('change', () => { state.mode = modeSelect.value })
+  const wire = (action, handler, event = 'click') => {
+    const el = root.querySelector(`[data-action="${action}"]`)
+    if (el) el.addEventListener(event, handler)
+  }
+  wire('synthetic', () => useSynthetic())
+  wire('camera', useCamera)
+  wire('join', joinRoom)
+  wire('watch', watchRoom)
+  wire('load-vdo', loadVdo)
+  wire('hide-vdo', hideVdo)
+  wire('fullscreen', toggleFullscreen)
+  if (modeSelect) modeSelect.addEventListener('change', () => { state.mode = modeSelect.value })
+
+  if (spec.ui === 'join') {
+    setStatus(root, `Join with camera and microphone — everyone in room ${room} is visible. No app or account needed.`)
+  } else if (spec.ui === 'watch') {
+    setStatus(root, spec.stream ? 'Press Watch to play the broadcast.' : `Watching joins room ${room} as a visible, silent guest.`)
+  }
 
   resize()
   window.addEventListener('resize', resize)
+  document.addEventListener('fullscreenchange', resize)
   requestAnimationFrame(animate)
 }
 

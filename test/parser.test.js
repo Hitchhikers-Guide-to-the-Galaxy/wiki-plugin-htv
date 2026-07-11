@@ -25,3 +25,15 @@ test('parses and sanitises the room name', () => {
   assert.equal(parseText('ROOM green room!').room, 'green_room_')
   assert.equal(parseText('TITLE No Room Here').room, '')
 })
+
+test('parses ui modes and defaults to studio', () => {
+  assert.equal(parseText('UI JOIN').ui, 'join')
+  assert.equal(parseText('UI watch').ui, 'watch')
+  assert.equal(parseText('UI KIOSK').ui, 'studio')
+  assert.equal(parseText('TITLE Plain').ui, 'studio')
+})
+
+test('parses a stream url', () => {
+  assert.equal(parseText('STREAM https://youtube.com/live/abc123').stream, 'https://youtube.com/live/abc123')
+  assert.equal(parseText('TITLE No Stream').stream, '')
+})
