@@ -186,7 +186,6 @@ const videoHtml = spec => `
       <div class="htv-v-status" role="status"></div>
     </div>
     <div class="htv-v-bar">
-      <button type="button" data-action="fullscreen" title="Fullscreen">⛶</button>
       <a class="htv-v-tab" target="_blank" rel="noopener" style="display:none">Open in new tab ↗</a>
     </div>
   </div>`
@@ -248,7 +247,6 @@ function initVideoMode (root, spec) {
   const poster = root.querySelector('.htv-v-poster')
   const status = root.querySelector('.htv-v-status')
   const playBtn = root.querySelector('[data-action="play"]')
-  const fsBtn = root.querySelector('[data-action="fullscreen"]')
   const tab = root.querySelector('.htv-v-tab')
 
   const say = text => { if (status) status.textContent = text || '' }
@@ -320,26 +318,9 @@ function initVideoMode (root, spec) {
     }
   }
 
-  // True OS fullscreen — the whole-screen movie experience. Target the <video>
-  // element (works everywhere, incl. iOS via webkitEnterFullscreen); fall back to
-  // the shell before Play. Surface a message if fullscreen is blocked (e.g. the
-  // page is embedded in an iframe without allow="fullscreen") rather than no-op.
-  function enterFullscreen () {
-    const fsEl = document.fullscreenElement || document.webkitFullscreenElement
-    if (fsEl) { (document.exitFullscreen || document.webkitExitFullscreen)?.call(document); return }
-    const video = root._htvPlayer?.video
-    if (video?.webkitEnterFullscreen && !video.requestFullscreen) { video.webkitEnterFullscreen(); return } // iOS
-    const target = video || root
-    const req = target.requestFullscreen || target.webkitRequestFullscreen
-    if (!req) { say('Fullscreen is not supported in this browser.'); return }
-    try {
-      const p = req.call(target)
-      if (p?.catch) p.catch(err => say(`Fullscreen blocked (often an embedded frame): ${err.message || err.name}`))
-    } catch (err) { say(`Fullscreen blocked: ${err.message || err}`) }
-  }
-
+  // Fullscreen is handled by the native <video controls> control once playing —
+  // no custom button needed.
   if (playBtn) playBtn.addEventListener('click', play)
-  if (fsBtn) fsBtn.addEventListener('click', enterFullscreen)
 }
 
 const setStatus = (root, text, strong = '') => {

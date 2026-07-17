@@ -19,7 +19,7 @@
     {
       "type": "markdown",
       "id": "0864082ac83465d3",
-      "text": "## Video Mode\n\n`MODE VIDEO` renders a small `<video>` player instead of the WebGL surface — no Three.js is loaded, so it stays light even with many on a page. It plays a Jellyfin item the same way the browser does in Jellyfin: HLS with the video remuxed (copied) when the browser can decode it, transcoded only when it must. There is a fullscreen button and an open-in-new-tab link to the Jellyfin page. The player loads lazily on Play, and tears itself down — destroying the stream and stopping the server-side transcode — when its item or page goes away."
+      "text": "## Video Mode\n\n`MODE VIDEO` renders a small `<video>` player instead of the WebGL surface — no Three.js is loaded, so it stays light even with many on a page. It plays a Jellyfin item the same way the browser does in Jellyfin: HLS with the video remuxed (copied) when the browser can decode it, transcoded only when it must. It uses the player's own fullscreen control and adds an open-in-new-tab link to the Jellyfin page. The player loads lazily on Play, and tears itself down — destroying the stream and stopping the server-side transcode — when its item or page goes away."
     },
     {
       "type": "markdown",
@@ -61,7 +61,7 @@
           {
             "type": "markdown",
             "id": "0864082ac83465d3",
-            "text": "## Video Mode\n\n`MODE VIDEO` renders a small `<video>` player instead of the WebGL surface — no Three.js is loaded, so it stays light even with many on a page. It plays a Jellyfin item the same way the browser does in Jellyfin: HLS with the video remuxed (copied) when the browser can decode it, transcoded only when it must. There is a fullscreen button and an open-in-new-tab link to the Jellyfin page. The player loads lazily on Play, and tears itself down — destroying the stream and stopping the server-side transcode — when its item or page goes away."
+            "text": "## Video Mode\n\n`MODE VIDEO` renders a small `<video>` player instead of the WebGL surface — no Three.js is loaded, so it stays light even with many on a page. It plays a Jellyfin item the same way the browser does in Jellyfin: HLS with the video remuxed (copied) when the browser can decode it, transcoded only when it must. It uses the player's own fullscreen control and adds an open-in-new-tab link to the Jellyfin page. The player loads lazily on Play, and tears itself down — destroying the stream and stopping the server-side transcode — when its item or page goes away."
           },
           {
             "type": "markdown",

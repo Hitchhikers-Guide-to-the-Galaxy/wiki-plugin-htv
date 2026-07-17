@@ -14,7 +14,7 @@
     {
       "type": "markdown",
       "id": "60584fd822d3b66b",
-      "text": "`MODE VIDEO` plays an HLS stream or a Jellyfin item in a small `<video>` — with a real fullscreen button and an open-in-new-tab link. It bundles hls.js, so Chrome and Firefox play HLS too, not just Safari. This demo streams a public test feed:"
+      "text": "`MODE VIDEO` plays an HLS stream or a Jellyfin item in a small `<video>` — using the player's own fullscreen control, plus an open-in-new-tab link. It bundles hls.js, so Chrome and Firefox play HLS too, not just Safari. This demo streams a public test feed:"
     },
     {
       "type": "htv",
@@ -24,7 +24,7 @@
     {
       "type": "markdown",
       "id": "bc9608aa36a8ec27",
-      "text": "Press ▶ Play, then the ⛶ button for true fullscreen. For a Jellyfin library, replace `STREAM` with `JELLYFIN <base>` + `ITEM <id>` + `KEY <apiKey>` — the player then negotiates playback the same way the browser does inside Jellyfin, remuxing rather than re-encoding when it can. The player loads lazily on Play and tears itself down when its item or page goes away."
+      "text": "Press ▶ Play, then use the player's own fullscreen control. For a Jellyfin library, replace `STREAM` with `JELLYFIN <base>` + `ITEM <id>` + `KEY <apiKey>` — the player then negotiates playback the same way the browser does inside Jellyfin, remuxing rather than re-encoding when it can. The player loads lazily on Play and tears itself down when its item or page goes away."
     },
     {
       "type": "markdown",
@@ -71,7 +71,7 @@
           {
             "type": "markdown",
             "id": "60584fd822d3b66b",
-            "text": "`MODE VIDEO` plays an HLS stream or a Jellyfin item in a small `<video>` — with a real fullscreen button and an open-in-new-tab link. It bundles hls.js, so Chrome and Firefox play HLS too, not just Safari. This demo streams a public test feed:"
+            "text": "`MODE VIDEO` plays an HLS stream or a Jellyfin item in a small `<video>` — using the player's own fullscreen control, plus an open-in-new-tab link. It bundles hls.js, so Chrome and Firefox play HLS too, not just Safari. This demo streams a public test feed:"
           },
           {
             "type": "htv",
@@ -81,7 +81,7 @@
           {
             "type": "markdown",
             "id": "bc9608aa36a8ec27",
-            "text": "Press ▶ Play, then the ⛶ button for true fullscreen. For a Jellyfin library, replace `STREAM` with `JELLYFIN <base>` + `ITEM <id>` + `KEY <apiKey>` — the player then negotiates playback the same way the browser does inside Jellyfin, remuxing rather than re-encoding when it can. The player loads lazily on Play and tears itself down when its item or page goes away."
+            "text": "Press ▶ Play, then use the player's own fullscreen control. For a Jellyfin library, replace `STREAM` with `JELLYFIN <base>` + `ITEM <id>` + `KEY <apiKey>` — the player then negotiates playback the same way the browser does inside Jellyfin, remuxing rather than re-encoding when it can. The player loads lazily on Play and tears itself down when its item or page goes away."
           },
           {
             "type": "markdown",
