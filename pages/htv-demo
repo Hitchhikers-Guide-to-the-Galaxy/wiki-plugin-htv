@@ -1,0 +1,117 @@
+{
+  "title": "Htv Demo",
+  "story": [
+    {
+      "type": "markdown",
+      "id": "40348e435529087c",
+      "text": "A live demo of the **Htv** plugin. Two modes share one item type: a lightweight **video** player, and a WebGL **live media surface**."
+    },
+    {
+      "type": "markdown",
+      "id": "28e69697abad091f",
+      "text": "## Video Player"
+    },
+    {
+      "type": "markdown",
+      "id": "60584fd822d3b66b",
+      "text": "`MODE VIDEO` plays an HLS stream or a Jellyfin item in a small `<video>` — with a real fullscreen button and an open-in-new-tab link. It bundles hls.js, so Chrome and Firefox play HLS too, not just Safari. This demo streams a public test feed:"
+    },
+    {
+      "type": "htv",
+      "id": "5f2eeb3f555f2ce2",
+      "text": "MODE video\nTITLE Big Buck Bunny — HLS demo\nHEIGHT 420\nSTREAM https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+    },
+    {
+      "type": "markdown",
+      "id": "bc9608aa36a8ec27",
+      "text": "Press ▶ Play, then the ⛶ button for true fullscreen. For a Jellyfin library, replace `STREAM` with `JELLYFIN <base>` + `ITEM <id>` + `KEY <apiKey>` — the player then negotiates playback the same way the browser does inside Jellyfin, remuxing rather than re-encoding when it can. The player loads lazily on Play and tears itself down when its item or page goes away."
+    },
+    {
+      "type": "markdown",
+      "id": "22f4c5bb139dada8",
+      "text": "## Live Surface"
+    },
+    {
+      "type": "markdown",
+      "id": "97f67d19dc738b62",
+      "text": "The default modes render a WebGL shader wall driven by a video texture — `SWARM`, `SHATTER`, `PORTAL`, or `NOVA`. Click the surface to spin it through the depth plane."
+    },
+    {
+      "type": "htv",
+      "id": "5b81a9b3236dbb30",
+      "text": "TITLE Htv Live Surface\nMODE NOVA\nHEIGHT 460"
+    },
+    {
+      "type": "markdown",
+      "id": "b34e159852bbaefd",
+      "text": "## See"
+    },
+    {
+      "type": "markdown",
+      "id": "f418ca6f7043f119",
+      "text": "- [[About Htv Plugin]] — the item text reference\n- [https://github.com/Hitchhikers-Guide-to-the-Galaxy/wiki-plugin-htv wiki-plugin-htv on GitHub]"
+    }
+  ],
+  "journal": [
+    {
+      "type": "create",
+      "item": {
+        "title": "Htv Demo",
+        "story": [
+          {
+            "type": "markdown",
+            "id": "40348e435529087c",
+            "text": "A live demo of the **Htv** plugin. Two modes share one item type: a lightweight **video** player, and a WebGL **live media surface**."
+          },
+          {
+            "type": "markdown",
+            "id": "28e69697abad091f",
+            "text": "## Video Player"
+          },
+          {
+            "type": "markdown",
+            "id": "60584fd822d3b66b",
+            "text": "`MODE VIDEO` plays an HLS stream or a Jellyfin item in a small `<video>` — with a real fullscreen button and an open-in-new-tab link. It bundles hls.js, so Chrome and Firefox play HLS too, not just Safari. This demo streams a public test feed:"
+          },
+          {
+            "type": "htv",
+            "id": "5f2eeb3f555f2ce2",
+            "text": "MODE video\nTITLE Big Buck Bunny — HLS demo\nHEIGHT 420\nSTREAM https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+          },
+          {
+            "type": "markdown",
+            "id": "bc9608aa36a8ec27",
+            "text": "Press ▶ Play, then the ⛶ button for true fullscreen. For a Jellyfin library, replace `STREAM` with `JELLYFIN <base>` + `ITEM <id>` + `KEY <apiKey>` — the player then negotiates playback the same way the browser does inside Jellyfin, remuxing rather than re-encoding when it can. The player loads lazily on Play and tears itself down when its item or page goes away."
+          },
+          {
+            "type": "markdown",
+            "id": "22f4c5bb139dada8",
+            "text": "## Live Surface"
+          },
+          {
+            "type": "markdown",
+            "id": "97f67d19dc738b62",
+            "text": "The default modes render a WebGL shader wall driven by a video texture — `SWARM`, `SHATTER`, `PORTAL`, or `NOVA`. Click the surface to spin it through the depth plane."
+          },
+          {
+            "type": "htv",
+            "id": "5b81a9b3236dbb30",
+            "text": "TITLE Htv Live Surface\nMODE NOVA\nHEIGHT 460"
+          },
+          {
+            "type": "markdown",
+            "id": "b34e159852bbaefd",
+            "text": "## See"
+          },
+          {
+            "type": "markdown",
+            "id": "f418ca6f7043f119",
+            "text": "- [[About Htv Plugin]] — the item text reference\n- [https://github.com/Hitchhikers-Guide-to-the-Galaxy/wiki-plugin-htv wiki-plugin-htv on GitHub]"
+          }
+        ]
+      },
+      "date": 1784716000000,
+      "provenance": "Authored by an AI agent — Claude Code (claude-opus-4-8). [https://claude.com/claude-code Claude Code]"
+    }
+  ]
+}

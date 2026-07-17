@@ -4,7 +4,7 @@
     {
       "type": "markdown",
       "id": "a5b9ab1e17aae0d0",
-      "text": "The **Htv Plugin** renders Hitchhiker.tv live media surfaces directly inside a wiki item. It is the first plugin form of the live camera, VDO.Ninja, and Three.js surface experiments."
+      "text": "The **Htv Plugin** renders Hitchhiker.tv live media surfaces directly inside a wiki item. It is the first plugin form of the live camera, VDO.Ninja, and Three.js surface experiments. See the [[Htv Demo]] for a working video player and live surface."
     },
     {
       "type": "htv",
@@ -14,7 +14,22 @@
     {
       "type": "markdown",
       "id": "163563e5996781b4",
-      "text": "## Item Text\n\nCommands follow the Federated Wiki DSL convention: uppercase first word for commands, optional colon accepted.\n\n- `TITLE` sets the panel title.\n- `MODE` chooses `SWARM`, `SHATTER`, `PORTAL`, or `NOVA`.\n- `HEIGHT` sets the item height in pixels.\n- `VDO` provides an optional VDO.Ninja view URL.\n- `ROOM` names a VDO.Ninja room for the Join Room and Watch Room buttons. Without it, a room name is derived from the item id, so forks of the page share the same room.\n- `UI` chooses the presentation: `JOIN` (a clean join card), `WATCH` (a watch card), or the default `STUDIO` panel.\n- `STREAM` gives a broadcast playback URL for the watch card: YouTube, Twitch, or an HLS `.m3u8` stream.\n\nWatching a room joins it as a visible, camera-less guest \u2014 everyone in a room can see who is present. Anonymous watching belongs on the broadcast layer via `STREAM`. A fullscreen button expands the whole surface.\n\n`NOVA` blasts the tiles apart in periodic explosions. Clicking any surface spins it through the depth plane, with a ripple spreading from the click point, before it eases back into place."
+      "text": "## Item Text\n\nCommands follow the Federated Wiki DSL convention: uppercase first word for commands, optional colon accepted.\n\n- `TITLE` sets the panel title.\n- `MODE` chooses `SWARM`, `SHATTER`, `PORTAL`, `NOVA`, or `VIDEO` (the lightweight player — see below).\n- `HEIGHT` sets the item height in pixels.\n- `VDO` provides an optional VDO.Ninja view URL.\n- `ROOM` names a VDO.Ninja room for the Join Room and Watch Room buttons. Without it, a room name is derived from the item id, so forks of the page share the same room.\n- `UI` chooses the presentation: `JOIN` (a clean join card), `WATCH` (a watch card), or the default `STUDIO` panel.\n- `STREAM` gives a broadcast playback URL for the watch card: YouTube, Twitch, or an HLS `.m3u8` stream.\n- `JELLYFIN` sets a Jellyfin server base URL, with `ITEM` (the Jellyfin item id) and `KEY` (an API key) — used by `MODE VIDEO`.\n\nWatching a room joins it as a visible, camera-less guest — everyone in a room can see who is present. Anonymous watching belongs on the broadcast layer via `STREAM`. A fullscreen button expands the whole surface.\n\n`NOVA` blasts the tiles apart in periodic explosions. Clicking any surface spins it through the depth plane, with a ripple spreading from the click point, before it eases back into place."
+    },
+    {
+      "type": "markdown",
+      "id": "0864082ac83465d3",
+      "text": "## Video Mode\n\n`MODE VIDEO` renders a small `<video>` player instead of the WebGL surface — no Three.js is loaded, so it stays light even with many on a page. It plays a Jellyfin item the same way the browser does in Jellyfin: HLS with the video remuxed (copied) when the browser can decode it, transcoded only when it must. There is a fullscreen button and an open-in-new-tab link to the Jellyfin page. The player loads lazily on Play, and tears itself down — destroying the stream and stopping the server-side transcode — when its item or page goes away."
+    },
+    {
+      "type": "markdown",
+      "id": "eddd9fb5fed5cac8",
+      "text": "A video item:"
+    },
+    {
+      "type": "markdown",
+      "id": "4577da7d3885f5ff",
+      "text": "MODE VIDEO\nTITLE Ocean's Twelve (2004)\nHEIGHT 420\nJELLYFIN http://pi5.local:4284\nITEM cf9d8c9560aa1cd935912fc018ec32cd\nKEY your-jellyfin-api-key"
     },
     {
       "type": "markdown",
@@ -31,7 +46,7 @@
           {
             "type": "markdown",
             "id": "a5b9ab1e17aae0d0",
-            "text": "The **Htv Plugin** renders Hitchhiker.tv live media surfaces directly inside a wiki item. It is the first plugin form of the live camera, VDO.Ninja, and Three.js surface experiments."
+            "text": "The **Htv Plugin** renders Hitchhiker.tv live media surfaces directly inside a wiki item. It is the first plugin form of the live camera, VDO.Ninja, and Three.js surface experiments. See the [[Htv Demo]] for a working video player and live surface."
           },
           {
             "type": "htv",
@@ -41,7 +56,22 @@
           {
             "type": "markdown",
             "id": "163563e5996781b4",
-            "text": "## Item Text\n\nCommands follow the Federated Wiki DSL convention: uppercase first word for commands, optional colon accepted.\n\n- `TITLE` sets the panel title.\n- `MODE` chooses `SWARM`, `SHATTER`, `PORTAL`, or `NOVA`.\n- `HEIGHT` sets the item height in pixels.\n- `VDO` provides an optional VDO.Ninja view URL.\n- `ROOM` names a VDO.Ninja room for the Join Room and Watch Room buttons. Without it, a room name is derived from the item id, so forks of the page share the same room.\n- `UI` chooses the presentation: `JOIN` (a clean join card), `WATCH` (a watch card), or the default `STUDIO` panel.\n- `STREAM` gives a broadcast playback URL for the watch card: YouTube, Twitch, or an HLS `.m3u8` stream.\n\nWatching a room joins it as a visible, camera-less guest \u2014 everyone in a room can see who is present. Anonymous watching belongs on the broadcast layer via `STREAM`. A fullscreen button expands the whole surface.\n\n`NOVA` blasts the tiles apart in periodic explosions. Clicking any surface spins it through the depth plane, with a ripple spreading from the click point, before it eases back into place."
+            "text": "## Item Text\n\nCommands follow the Federated Wiki DSL convention: uppercase first word for commands, optional colon accepted.\n\n- `TITLE` sets the panel title.\n- `MODE` chooses `SWARM`, `SHATTER`, `PORTAL`, `NOVA`, or `VIDEO` (the lightweight player — see below).\n- `HEIGHT` sets the item height in pixels.\n- `VDO` provides an optional VDO.Ninja view URL.\n- `ROOM` names a VDO.Ninja room for the Join Room and Watch Room buttons. Without it, a room name is derived from the item id, so forks of the page share the same room.\n- `UI` chooses the presentation: `JOIN` (a clean join card), `WATCH` (a watch card), or the default `STUDIO` panel.\n- `STREAM` gives a broadcast playback URL for the watch card: YouTube, Twitch, or an HLS `.m3u8` stream.\n- `JELLYFIN` sets a Jellyfin server base URL, with `ITEM` (the Jellyfin item id) and `KEY` (an API key) — used by `MODE VIDEO`.\n\nWatching a room joins it as a visible, camera-less guest — everyone in a room can see who is present. Anonymous watching belongs on the broadcast layer via `STREAM`. A fullscreen button expands the whole surface.\n\n`NOVA` blasts the tiles apart in periodic explosions. Clicking any surface spins it through the depth plane, with a ripple spreading from the click point, before it eases back into place."
+          },
+          {
+            "type": "markdown",
+            "id": "0864082ac83465d3",
+            "text": "## Video Mode\n\n`MODE VIDEO` renders a small `<video>` player instead of the WebGL surface — no Three.js is loaded, so it stays light even with many on a page. It plays a Jellyfin item the same way the browser does in Jellyfin: HLS with the video remuxed (copied) when the browser can decode it, transcoded only when it must. There is a fullscreen button and an open-in-new-tab link to the Jellyfin page. The player loads lazily on Play, and tears itself down — destroying the stream and stopping the server-side transcode — when its item or page goes away."
+          },
+          {
+            "type": "markdown",
+            "id": "eddd9fb5fed5cac8",
+            "text": "A video item:"
+          },
+          {
+            "type": "markdown",
+            "id": "4577da7d3885f5ff",
+            "text": "MODE VIDEO\nTITLE Ocean's Twelve (2004)\nHEIGHT 420\nJELLYFIN http://pi5.local:4284\nITEM cf9d8c9560aa1cd935912fc018ec32cd\nKEY your-jellyfin-api-key"
           },
           {
             "type": "markdown",

@@ -1,4 +1,6 @@
-const COMMANDS = new Set(['MODE', 'HEIGHT', 'VDO', 'TITLE', 'ROOM', 'UI', 'STREAM'])
+import Hls from 'hls.js'
+
+const COMMANDS = new Set(['MODE', 'HEIGHT', 'VDO', 'TITLE', 'ROOM', 'UI', 'STREAM', 'JELLYFIN', 'ITEM', 'KEY'])
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js'
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
@@ -11,7 +13,10 @@ export const parseText = text => {
     room: '',
     ui: 'studio',
     stream: '',
-    title: 'Hitchhiker.tv Live Surface'
+    title: 'Hitchhiker.tv Live Surface',
+    jellyfin: '',
+    item: '',
+    key: ''
   }
 
   for (const raw of (text || '').split('\n')) {
@@ -22,13 +27,16 @@ export const parseText = text => {
     const value = rest.join(' ').trim()
     if (!COMMANDS.has(key)) continue
 
-    if (key === 'MODE') out.mode = ['swarm', 'shatter', 'portal', 'nova'].includes(value.toLowerCase()) ? value.toLowerCase() : out.mode
+    if (key === 'MODE') out.mode = ['swarm', 'shatter', 'portal', 'nova', 'video'].includes(value.toLowerCase()) ? value.toLowerCase() : out.mode
     if (key === 'HEIGHT') out.height = clamp(parseInt(value, 10) || out.height, 360, 1400)
     if (key === 'VDO') out.vdo = value
     if (key === 'ROOM') out.room = value.replace(/[^A-Za-z0-9_]/g, '_')
     if (key === 'UI') out.ui = ['join', 'watch', 'studio'].includes(value.toLowerCase()) ? value.toLowerCase() : out.ui
     if (key === 'STREAM') out.stream = value
     if (key === 'TITLE') out.title = value || out.title
+    if (key === 'JELLYFIN') out.jellyfin = value.replace(/\/$/, '')
+    if (key === 'ITEM') out.item = value.trim()
+    if (key === 'KEY') out.key = value.trim()
   }
 
   return out
@@ -105,6 +113,18 @@ const css = `
   .htv-room{align-self:center;padding:0 8px;color:#87ffd8;font-size:11px;font-family:ui-monospace,monospace}
   .htv-shell:fullscreen{height:100vh!important;border-radius:0}
   .htv-vdo video{width:100%;height:100%;object-fit:contain;background:#000}
+  .htv-video-shell{position:relative;overflow:hidden;border-radius:8px;background:#000;color:#f3f5ee;font-family:Inter,ui-sans-serif,system-ui,sans-serif}
+  .htv-video-shell:fullscreen{height:100vh!important;border-radius:0}
+  .htv-video-shell video{width:100%;height:100%;object-fit:contain;background:#000;display:block}
+  .htv-video-shell video:fullscreen,.htv-video-shell video:-webkit-full-screen{width:100vw;height:100vh;object-fit:contain;background:#000}
+  .htv-v-poster{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(circle at 50% 40%,#0d1f1b,#050609);text-align:center;padding:16px}
+  .htv-v-title{font-size:15px;font-weight:600;color:#e8efe8;max-width:80%;opacity:.92}
+  .htv-v-play{min-height:46px;padding:0 22px;border:1px solid rgba(135,255,216,.5);border-radius:9px;background:rgba(135,255,216,.16);color:#eafff7;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+  .htv-v-play:hover{background:rgba(135,255,216,.26)}
+  .htv-v-status{font-size:12px;color:#b9c0b6;min-height:16px}
+  .htv-v-bar{position:absolute;z-index:3;right:10px;bottom:10px;display:flex;gap:7px;opacity:.85}
+  .htv-v-bar button,.htv-v-bar a{min-height:30px;display:inline-flex;align-items:center;padding:0 10px;border:1px solid rgba(255,255,255,.24);border-radius:7px;background:rgba(9,12,16,.72);color:#f3f5ee;font:inherit;font-size:12px;text-decoration:none;cursor:pointer}
+  .htv-video-shell.is-playing .htv-v-poster{display:none}
 `
 
 const escapeHTML = value => String(value || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
@@ -121,17 +141,205 @@ const ensureStyle = () => {
 export const emit = (div, item) => {
   ensureStyle()
   const spec = parseText(item.text)
+  if (spec.mode === 'video') { div.html(videoHtml(spec)); return }
   div.html(html(spec))
 }
 
 export const bind = (div, item) => {
+  const spec = parseText(item.text)
+  const editOnDblClick = event => {
+    if (event.target.closest('button,input,select,iframe,video,a')) return
+    if (window.wiki?.textEditor) window.wiki.textEditor(div, item)
+  }
+  if (spec.mode === 'video') {
+    const root = div.find('.htv-video-shell')[0]
+    if (root) initVideoMode(root, spec, item)
+    div.on('dblclick', editOnDblClick)
+    return
+  }
   const root = div.find('.htv-shell')[0]
   if (!root) return
-  initSurface(root, parseText(item.text), item)
-  div.on('dblclick', event => {
-    if (event.target.closest('button,input,select,iframe')) return
-    if (window.wiki?.textEditor) window.wiki.textEditor(div, item)
-  })
+  initSurface(root, spec, item)
+  div.on('dblclick', editOnDblClick)
+}
+
+// Optional teardown hook (see issue.localhost "Plugin Teardown Hook"). The wiki
+// client does not call this yet, so bind() also self-manages via a watcher — but
+// exporting it means the plugin is ready the day the client adds the hook.
+export const dispose = (div, item) => {
+  const shell = div.find?.('.htv-video-shell')[0] || div.querySelector?.('.htv-video-shell')
+  if (shell?._htvTeardown) shell._htvTeardown()
+  const surface = div.find?.('.htv-shell')[0] || div.querySelector?.('.htv-shell')
+  if (surface?._htvDispose) surface._htvDispose()
+}
+
+// ---- Lightweight video mode (no Three.js / WebGL) ----------------------------
+// Plays a Jellyfin item (or a raw HLS/MP4 STREAM url) in a plain <video> the same
+// way it plays in Chrome via Jellyfin: HLS with the video remuxed (copied) when the
+// browser can decode it, transcoded otherwise. Fullscreen + open-in-new-tab.
+
+const videoHtml = spec => `
+  <div class="htv-video-shell" style="height:${spec.height}px">
+    <div class="htv-v-poster">
+      <div class="htv-v-title">${escapeHTML(spec.title)}</div>
+      <button type="button" class="htv-v-play" data-action="play">▶ Play</button>
+      <div class="htv-v-status" role="status"></div>
+    </div>
+    <div class="htv-v-bar">
+      <button type="button" data-action="fullscreen" title="Fullscreen">⛶</button>
+      <a class="htv-v-tab" target="_blank" rel="noopener" style="display:none">Open in new tab ↗</a>
+    </div>
+  </div>`
+
+// One shared HLS attach path, used by both video mode and the STREAM watch card.
+// hls.js is bundled (offline/CSP-clean). Returns the Hls instance (or null for
+// native playback) so callers can destroy it on teardown.
+const attachHls = (video, url) => {
+  if (/\.m3u8(\?|$)/.test(url) && Hls.isSupported()) {
+    const hls = new Hls({ maxBufferLength: 30, backBufferLength: 10, enableWorker: true })
+    hls.loadSource(url)
+    hls.attachMedia(video)
+    return hls
+  }
+  video.src = url // Safari native HLS, or a progressive mp4
+  return null
+}
+
+const canDecode = codecs => {
+  try {
+    return typeof MediaSource !== 'undefined' && MediaSource.isTypeSupported(`video/mp4; codecs="${codecs}"`)
+  } catch (error) {
+    return false
+  }
+}
+
+// Declare the browser's real codec support so Jellyfin copies the video (remux,
+// cheap) rather than re-encoding when it doesn't have to.
+const deviceProfile = () => {
+  const hevc = canDecode('hvc1.1.6.L120.90')
+  const videoCodec = hevc ? 'hevc,h264' : 'h264'
+  return {
+    MaxStreamingBitrate: 120000000,
+    DirectPlayProfiles: [{ Container: 'mp4,m4v', Type: 'Video', VideoCodec: videoCodec, AudioCodec: 'aac,mp3,ac3,eac3' }],
+    TranscodingProfiles: [{ Container: 'mp4', Type: 'Video', VideoCodec: videoCodec, AudioCodec: 'aac', Protocol: 'hls', Context: 'Streaming' }]
+  }
+}
+
+const jget = (url) => fetch(url, { headers: { Accept: 'application/json' } }).then(r => r.json())
+
+// Resolve a Jellyfin item to a playable URL via PlaybackInfo (like jellyfin-web).
+const resolveJellyfin = async (base, itemId, apiKey) => {
+  let uid = ''
+  try { uid = (await jget(`${base}/Users?api_key=${apiKey}`))[0]?.Id || '' } catch (error) { /* fall through */ }
+  const info = await fetch(`${base}/Items/${itemId}/PlaybackInfo?api_key=${apiKey}${uid ? `&UserId=${uid}` : ''}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ DeviceProfile: deviceProfile() })
+  }).then(r => r.json())
+  const ms = (info.MediaSources || [])[0] || {}
+  const rel = ms.TranscodingUrl || ms.DirectStreamUrl
+  const url = rel ? base + rel : `${base}/Videos/${itemId}/stream?static=true&api_key=${apiKey}`
+  let deviceId = ''
+  try { deviceId = new URLSearchParams((rel || '').split('?')[1]).get('DeviceId') || '' } catch (error) { /* direct play */ }
+  return { url, sessionId: info.PlaySessionId || '', deviceId }
+}
+
+function initVideoMode (root, spec) {
+  const poster = root.querySelector('.htv-v-poster')
+  const status = root.querySelector('.htv-v-status')
+  const playBtn = root.querySelector('[data-action="play"]')
+  const fsBtn = root.querySelector('[data-action="fullscreen"]')
+  const tab = root.querySelector('.htv-v-tab')
+
+  const say = text => { if (status) status.textContent = text || '' }
+
+  // "Open in new tab": the Jellyfin details page, or the raw stream url.
+  const tabUrl = spec.jellyfin && spec.item
+    ? `${spec.jellyfin}/web/#/details?id=${encodeURIComponent(spec.item)}`
+    : (spec.stream || '')
+  if (tab && tabUrl) { tab.href = tabUrl; tab.style.display = '' }
+
+  const teardown = () => {
+    const p = root._htvPlayer
+    if (p) {
+      clearInterval(p.watch)
+      try { p.hls?.destroy() } catch (error) { /* ignore */ }
+      if (p.video) { try { p.video.pause(); p.video.removeAttribute('src'); p.video.load() } catch (error) { /* ignore */ } }
+      // Kill the server-side transcode/remux so no ffmpeg is orphaned on the Pi.
+      // DELETE /Videos/ActiveEncodings is the authoritative stop; keepalive lets
+      // it survive a page unload too.
+      if (p.base && (p.deviceId || p.sessionId)) {
+        const qs = new URLSearchParams({ api_key: p.key })
+        if (p.deviceId) qs.set('deviceId', p.deviceId)
+        if (p.sessionId) qs.set('playSessionId', p.sessionId)
+        try { fetch(`${p.base}/Videos/ActiveEncodings?${qs}`, { method: 'DELETE', keepalive: true }).catch(() => {}) } catch (error) { /* ignore */ }
+      }
+      window.removeEventListener('pagehide', onHide)
+      root._htvPlayer = null
+    }
+  }
+  // The interval watcher catches in-page removal (item delete, lineup truncation),
+  // but a full navigation / tab close kills the page before it fires — so also tear
+  // down on pagehide (keepalive fetch survives the unload) to stop the Pi transcode.
+  const onHide = () => teardown()
+  root._htvTeardown = teardown
+
+  async function play () {
+    if (root._htvPlayer) return // already playing / building
+    if (!(spec.jellyfin && spec.item) && !spec.stream) { say('No JELLYFIN item or STREAM url set.'); return }
+    playBtn && (playBtn.disabled = true)
+    say('Loading…')
+    const video = document.createElement('video')
+    video.controls = true
+    video.playsInline = true
+    video.setAttribute('playsinline', '')
+    const player = { video, hls: null, sessionId: '', deviceId: '', base: spec.jellyfin, key: spec.key, watch: 0 }
+    root._htvPlayer = player
+    // Watcher: the wiki client never tells us we were removed, and a paused
+    // <video> runs no rAF loop — so poll for detachment and tear down.
+    player.watch = setInterval(() => { if (!root.isConnected) teardown() }, 2000)
+    window.addEventListener('pagehide', onHide)
+    try {
+      let url = spec.stream
+      if (spec.jellyfin && spec.item) {
+        const resolved = await resolveJellyfin(spec.jellyfin, spec.item, spec.key)
+        url = resolved.url
+        player.sessionId = resolved.sessionId
+        player.deviceId = resolved.deviceId
+      }
+      if (!root._htvPlayer) return // torn down while resolving
+      player.hls = attachHls(video, url)
+      root.insertBefore(video, root.firstChild)
+      root.classList.add('is-playing')
+      say('')
+      video.play().catch(() => {})
+    } catch (error) {
+      say(`Could not play: ${error.message || error}`)
+      teardown()
+      playBtn && (playBtn.disabled = false)
+    }
+  }
+
+  // True OS fullscreen — the whole-screen movie experience. Target the <video>
+  // element (works everywhere, incl. iOS via webkitEnterFullscreen); fall back to
+  // the shell before Play. Surface a message if fullscreen is blocked (e.g. the
+  // page is embedded in an iframe without allow="fullscreen") rather than no-op.
+  function enterFullscreen () {
+    const fsEl = document.fullscreenElement || document.webkitFullscreenElement
+    if (fsEl) { (document.exitFullscreen || document.webkitExitFullscreen)?.call(document); return }
+    const video = root._htvPlayer?.video
+    if (video?.webkitEnterFullscreen && !video.requestFullscreen) { video.webkitEnterFullscreen(); return } // iOS
+    const target = video || root
+    const req = target.requestFullscreen || target.webkitRequestFullscreen
+    if (!req) { say('Fullscreen is not supported in this browser.'); return }
+    try {
+      const p = req.call(target)
+      if (p?.catch) p.catch(err => say(`Fullscreen blocked (often an embedded frame): ${err.message || err.name}`))
+    } catch (err) { say(`Fullscreen blocked: ${err.message || err}`) }
+  }
+
+  if (playBtn) playBtn.addEventListener('click', play)
+  if (fsBtn) fsBtn.addEventListener('click', enterFullscreen)
 }
 
 const setStatus = (root, text, strong = '') => {
@@ -250,6 +458,7 @@ const initSurface = async (root, spec, item) => {
   const animate = now => {
     if (!root.isConnected || state.disposed) {
       renderer.dispose()
+      cleanup()
       return
     }
     drawSynthetic(now)
@@ -334,22 +543,7 @@ const initSurface = async (root, spec, item) => {
       media.playsInline = true
       media.controls = true
       media.muted = true
-      if (!window.Hls) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script')
-          script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js'
-          script.onload = resolve
-          script.onerror = reject
-          document.head.appendChild(script)
-        }).catch(() => {})
-      }
-      if (window.Hls?.isSupported()) {
-        const hls = new window.Hls()
-        hls.loadSource(url)
-        hls.attachMedia(media)
-      } else {
-        media.src = url
-      }
+      attachHls(media, url) // bundled hls.js, shared with video mode
       media.play().catch(() => {})
       return media
     }
@@ -439,6 +633,12 @@ const initSurface = async (root, spec, item) => {
   } else if (spec.ui === 'watch') {
     setStatus(root, spec.stream ? 'Press Watch to play the broadcast.' : `Watching joins room ${room} as a visible, silent guest.`)
   }
+
+  const cleanup = () => {
+    window.removeEventListener('resize', resize)
+    document.removeEventListener('fullscreenchange', resize)
+  }
+  root._htvDispose = () => { state.disposed = true; cleanup() }
 
   resize()
   window.addEventListener('resize', resize)
@@ -552,5 +752,5 @@ const updateTiles = (group, seconds, state) => {
 
 if (typeof window !== 'undefined') {
   window.plugins = window.plugins || {}
-  window.plugins.htv = { emit, bind }
+  window.plugins.htv = { emit, bind, dispose }
 }

@@ -1,6 +1,6 @@
 {
   "name": "wiki-plugin-htv",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Federated Wiki plugin for Hitchhiker.tv live media surfaces and wiki-controlled broadcast experiments.",
   "type": "module",
   "main": "client/htv.js",
@@ -26,5 +26,8 @@
   "bugs": {
     "url": "https://github.com/Hitchhikers-Guide-to-the-Galaxy/wiki-plugin-htv/issues"
   },
-  "homepage": "https://github.com/Hitchhikers-Guide-to-the-Galaxy/wiki-plugin-htv#readme"
+  "homepage": "https://github.com/Hitchhikers-Guide-to-the-Galaxy/wiki-plugin-htv#readme",
+  "dependencies": {
+    "hls.js": "^1.6.16"
+  }
 }

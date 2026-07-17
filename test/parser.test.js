@@ -37,3 +37,22 @@ test('parses a stream url', () => {
   assert.equal(parseText('STREAM https://youtube.com/live/abc123').stream, 'https://youtube.com/live/abc123')
   assert.equal(parseText('TITLE No Stream').stream, '')
 })
+
+test('parses the video mode', () => {
+  assert.equal(parseText('MODE VIDEO').mode, 'video')
+  assert.equal(parseText('MODE video').mode, 'video')
+})
+
+test('parses jellyfin item fields and strips a trailing slash', () => {
+  const p = parseText('MODE video\nJELLYFIN http://pi5.local:4284/\nITEM cf9d8c95\nKEY abc123')
+  assert.equal(p.jellyfin, 'http://pi5.local:4284')
+  assert.equal(p.item, 'cf9d8c95')
+  assert.equal(p.key, 'abc123')
+})
+
+test('jellyfin fields default empty', () => {
+  const p = parseText('TITLE Nothing')
+  assert.equal(p.jellyfin, '')
+  assert.equal(p.item, '')
+  assert.equal(p.key, '')
+})
