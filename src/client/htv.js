@@ -1,6 +1,6 @@
 import Hls from 'hls.js'
 
-const COMMANDS = new Set(['MODE', 'HEIGHT', 'VDO', 'TITLE', 'ROOM', 'UI', 'STREAM', 'JELLYFIN', 'ITEM', 'KEY'])
+const COMMANDS = new Set(['MODE', 'HEIGHT', 'VDO', 'TITLE', 'ROOM', 'UI', 'STREAM', 'JELLYFIN', 'ITEM', 'KEY', 'CAPTION'])
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js'
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
@@ -16,7 +16,8 @@ export const parseText = text => {
     title: 'Hitchhiker.tv Live Surface',
     jellyfin: '',
     item: '',
-    key: ''
+    key: '',
+    caption: ''
   }
 
   for (const raw of (text || '').split('\n')) {
@@ -37,6 +38,9 @@ export const parseText = text => {
     if (key === 'JELLYFIN') out.jellyfin = value.replace(/\/$/, '')
     if (key === 'ITEM') out.item = value.trim()
     if (key === 'KEY') out.key = value.trim()
+    // Repeated CAPTION lines accumulate, so a caption worth reading does not
+    // have to be written as one very long line in the editor.
+    if (key === 'CAPTION' && value) out.caption = out.caption ? `${out.caption} ${value}` : value
   }
 
   return out
@@ -125,6 +129,7 @@ const css = `
   .htv-v-bar{position:absolute;z-index:3;right:10px;bottom:10px;display:flex;gap:7px;opacity:.85}
   .htv-v-bar button,.htv-v-bar a{min-height:30px;display:inline-flex;align-items:center;padding:0 10px;border:1px solid rgba(255,255,255,.24);border-radius:7px;background:rgba(9,12,16,.72);color:#f3f5ee;font:inherit;font-size:12px;text-decoration:none;cursor:pointer}
   .htv-video-shell.is-playing .htv-v-poster{display:none}
+  .htv-caption{margin:6px 0 0;font-size:13px;line-height:1.45;opacity:.85}
 `
 
 const escapeHTML = value => String(value || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
@@ -138,11 +143,22 @@ const ensureStyle = () => {
   document.head.appendChild(style)
 }
 
+// A caption sits *below* the surface, the way it does on an image or audio item
+// — the player is the thing, the caption says what the thing is. It is rendered
+// through the wiki's own link resolver, so [[Media Archive]] in a caption is a
+// real link, and it carries the wiki's `caption` class so it looks native.
+const captionHtml = spec => {
+  if (!spec.caption) return ''
+  const resolve = window.wiki?.resolveLinks
+  const body = resolve ? resolve(spec.caption) : escapeHTML(spec.caption)
+  return `<p class="caption htv-caption">${body}</p>`
+}
+
 export const emit = (div, item) => {
   ensureStyle()
   const spec = parseText(item.text)
-  if (spec.mode === 'video') { div.html(videoHtml(spec)); return }
-  div.html(html(spec))
+  if (spec.mode === 'video') { div.html(videoHtml(spec) + captionHtml(spec)); return }
+  div.html(html(spec) + captionHtml(spec))
 }
 
 export const bind = (div, item) => {

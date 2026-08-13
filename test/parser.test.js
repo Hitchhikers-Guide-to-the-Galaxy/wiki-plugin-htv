@@ -56,3 +56,14 @@ test('jellyfin fields default empty', () => {
   assert.equal(p.item, '')
   assert.equal(p.key, '')
 })
+
+test('parses a caption and defaults it empty', () => {
+  assert.equal(parseText('CAPTION Spartacus (1960), held on the Pi5.').caption,
+               'Spartacus (1960), held on the Pi5.')
+  assert.equal(parseText('TITLE No Caption').caption, '')
+})
+
+test('repeated caption lines accumulate into one caption', () => {
+  const p = parseText('MODE video\nCAPTION Spartacus (1960).\nCAPTION Rescued 12 Aug 2026.')
+  assert.equal(p.caption, 'Spartacus (1960). Rescued 12 Aug 2026.')
+})

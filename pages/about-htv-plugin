@@ -14,12 +14,17 @@
     {
       "type": "markdown",
       "id": "163563e5996781b4",
-      "text": "## Item Text\n\nCommands follow the Federated Wiki DSL convention: uppercase first word for commands, optional colon accepted.\n\n- `TITLE` sets the panel title.\n- `MODE` chooses `SWARM`, `SHATTER`, `PORTAL`, `NOVA`, or `VIDEO` (the lightweight player — see below).\n- `HEIGHT` sets the item height in pixels.\n- `VDO` provides an optional VDO.Ninja view URL.\n- `ROOM` names a VDO.Ninja room for the Join Room and Watch Room buttons. Without it, a room name is derived from the item id, so forks of the page share the same room.\n- `UI` chooses the presentation: `JOIN` (a clean join card), `WATCH` (a watch card), or the default `STUDIO` panel.\n- `STREAM` gives a broadcast playback URL for the watch card: YouTube, Twitch, or an HLS `.m3u8` stream.\n- `JELLYFIN` sets a Jellyfin server base URL, with `ITEM` (the Jellyfin item id) and `KEY` (an API key) — used by `MODE VIDEO`.\n\nWatching a room joins it as a visible, camera-less guest — everyone in a room can see who is present. Anonymous watching belongs on the broadcast layer via `STREAM`. A fullscreen button expands the whole surface.\n\n`NOVA` blasts the tiles apart in periodic explosions. Clicking any surface spins it through the depth plane, with a ripple spreading from the click point, before it eases back into place."
+      "text": "## Item Text\n\nCommands follow the Federated Wiki DSL convention: uppercase first word for commands, optional colon accepted.\n\n- `TITLE` sets the panel title.\n- `MODE` chooses `SWARM`, `SHATTER`, `PORTAL`, `NOVA`, or `VIDEO` (the lightweight player — see below).\n- `HEIGHT` sets the item height in pixels.\n- `VDO` provides an optional VDO.Ninja view URL.\n- `ROOM` names a VDO.Ninja room for the Join Room and Watch Room buttons. Without it, a room name is derived from the item id, so forks of the page share the same room.\n- `UI` chooses the presentation: `JOIN` (a clean join card), `WATCH` (a watch card), or the default `STUDIO` panel.\n- `STREAM` gives a broadcast playback URL for the watch card: YouTube, Twitch, or an HLS `.m3u8` stream.\n- `JELLYFIN` sets a Jellyfin server base URL, with `ITEM` (the Jellyfin item id) and `KEY` (an API key) — used by `MODE VIDEO`.\n- `CAPTION` writes a caption beneath the surface. Repeated `CAPTION` lines join into one caption, and `[[wiki links]]` in it resolve like any other. It is the part of an item a reader is meant to rewrite: a generated player says what a file *is*, a caption says what it is *for*. Captions are plain text plus links — `*asterisks*` stay asterisks, because the wiki resolves links in a caption but does not run it through markdown.\n\nWatching a room joins it as a visible, camera-less guest — everyone in a room can see who is present. Anonymous watching belongs on the broadcast layer via `STREAM`. A fullscreen button expands the whole surface.\n\n`NOVA` blasts the tiles apart in periodic explosions. Clicking any surface spins it through the depth plane, with a ripple spreading from the click point, before it eases back into place."
     },
     {
       "type": "markdown",
       "id": "0864082ac83465d3",
       "text": "## Video Mode\n\n`MODE VIDEO` renders a small `<video>` player instead of the WebGL surface — no Three.js is loaded, so it stays light even with many on a page. It plays a Jellyfin item the same way the browser does in Jellyfin: HLS with the video remuxed (copied) when the browser can decode it, transcoded only when it must. It uses the player's own fullscreen control and adds an open-in-new-tab link to the Jellyfin page. The player loads lazily on Play, and tears itself down — destroying the stream and stopping the server-side transcode — when its item or page goes away."
+    },
+    {
+      "type": "markdown",
+      "id": "c4a71f0b3d2e6851",
+      "text": "The `JELLYFIN` base must be **https** whenever the wiki itself is served over https. An `http://…:8096` player embedded in an https page is mixed content, and the browser blocks it before a single byte of video is fetched — the item renders, the Play button does nothing, and the console says why. Put a TLS reverse proxy in front of Jellyfin and point `JELLYFIN` at that."
     },
     {
       "type": "markdown",
@@ -29,7 +34,7 @@
     {
       "type": "markdown",
       "id": "4577da7d3885f5ff",
-      "text": "MODE VIDEO\nTITLE Ocean's Twelve (2004)\nHEIGHT 420\nJELLYFIN http://pi5.local:4284\nITEM cf9d8c9560aa1cd935912fc018ec32cd\nKEY your-jellyfin-api-key"
+      "text": "MODE VIDEO\nTITLE Ocean's Twelve (2004)\nHEIGHT 420\nJELLYFIN https://jellyfin.private.fish\nITEM cf9d8c9560aa1cd935912fc018ec32cd\nKEY your-jellyfin-api-key\nCAPTION Ocean's Twelve (2004), held on the Pi5 and played through Jellyfin."
     },
     {
       "type": "markdown",
@@ -56,12 +61,17 @@
           {
             "type": "markdown",
             "id": "163563e5996781b4",
-            "text": "## Item Text\n\nCommands follow the Federated Wiki DSL convention: uppercase first word for commands, optional colon accepted.\n\n- `TITLE` sets the panel title.\n- `MODE` chooses `SWARM`, `SHATTER`, `PORTAL`, `NOVA`, or `VIDEO` (the lightweight player — see below).\n- `HEIGHT` sets the item height in pixels.\n- `VDO` provides an optional VDO.Ninja view URL.\n- `ROOM` names a VDO.Ninja room for the Join Room and Watch Room buttons. Without it, a room name is derived from the item id, so forks of the page share the same room.\n- `UI` chooses the presentation: `JOIN` (a clean join card), `WATCH` (a watch card), or the default `STUDIO` panel.\n- `STREAM` gives a broadcast playback URL for the watch card: YouTube, Twitch, or an HLS `.m3u8` stream.\n- `JELLYFIN` sets a Jellyfin server base URL, with `ITEM` (the Jellyfin item id) and `KEY` (an API key) — used by `MODE VIDEO`.\n\nWatching a room joins it as a visible, camera-less guest — everyone in a room can see who is present. Anonymous watching belongs on the broadcast layer via `STREAM`. A fullscreen button expands the whole surface.\n\n`NOVA` blasts the tiles apart in periodic explosions. Clicking any surface spins it through the depth plane, with a ripple spreading from the click point, before it eases back into place."
+            "text": "## Item Text\n\nCommands follow the Federated Wiki DSL convention: uppercase first word for commands, optional colon accepted.\n\n- `TITLE` sets the panel title.\n- `MODE` chooses `SWARM`, `SHATTER`, `PORTAL`, `NOVA`, or `VIDEO` (the lightweight player — see below).\n- `HEIGHT` sets the item height in pixels.\n- `VDO` provides an optional VDO.Ninja view URL.\n- `ROOM` names a VDO.Ninja room for the Join Room and Watch Room buttons. Without it, a room name is derived from the item id, so forks of the page share the same room.\n- `UI` chooses the presentation: `JOIN` (a clean join card), `WATCH` (a watch card), or the default `STUDIO` panel.\n- `STREAM` gives a broadcast playback URL for the watch card: YouTube, Twitch, or an HLS `.m3u8` stream.\n- `JELLYFIN` sets a Jellyfin server base URL, with `ITEM` (the Jellyfin item id) and `KEY` (an API key) — used by `MODE VIDEO`.\n- `CAPTION` writes a caption beneath the surface. Repeated `CAPTION` lines join into one caption, and `[[wiki links]]` in it resolve like any other. It is the part of an item a reader is meant to rewrite: a generated player says what a file *is*, a caption says what it is *for*. Captions are plain text plus links — `*asterisks*` stay asterisks, because the wiki resolves links in a caption but does not run it through markdown.\n\nWatching a room joins it as a visible, camera-less guest — everyone in a room can see who is present. Anonymous watching belongs on the broadcast layer via `STREAM`. A fullscreen button expands the whole surface.\n\n`NOVA` blasts the tiles apart in periodic explosions. Clicking any surface spins it through the depth plane, with a ripple spreading from the click point, before it eases back into place."
           },
           {
             "type": "markdown",
             "id": "0864082ac83465d3",
             "text": "## Video Mode\n\n`MODE VIDEO` renders a small `<video>` player instead of the WebGL surface — no Three.js is loaded, so it stays light even with many on a page. It plays a Jellyfin item the same way the browser does in Jellyfin: HLS with the video remuxed (copied) when the browser can decode it, transcoded only when it must. It uses the player's own fullscreen control and adds an open-in-new-tab link to the Jellyfin page. The player loads lazily on Play, and tears itself down — destroying the stream and stopping the server-side transcode — when its item or page goes away."
+          },
+          {
+            "type": "markdown",
+            "id": "c4a71f0b3d2e6851",
+            "text": "The `JELLYFIN` base must be **https** whenever the wiki itself is served over https. An `http://…:8096` player embedded in an https page is mixed content, and the browser blocks it before a single byte of video is fetched — the item renders, the Play button does nothing, and the console says why. Put a TLS reverse proxy in front of Jellyfin and point `JELLYFIN` at that."
           },
           {
             "type": "markdown",
@@ -71,7 +81,7 @@
           {
             "type": "markdown",
             "id": "4577da7d3885f5ff",
-            "text": "MODE VIDEO\nTITLE Ocean's Twelve (2004)\nHEIGHT 420\nJELLYFIN http://pi5.local:4284\nITEM cf9d8c9560aa1cd935912fc018ec32cd\nKEY your-jellyfin-api-key"
+            "text": "MODE VIDEO\nTITLE Ocean's Twelve (2004)\nHEIGHT 420\nJELLYFIN https://jellyfin.private.fish\nITEM cf9d8c9560aa1cd935912fc018ec32cd\nKEY your-jellyfin-api-key\nCAPTION Ocean's Twelve (2004), held on the Pi5 and played through Jellyfin."
           },
           {
             "type": "markdown",
